@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+enum Version {
+  V1 = 0;
+}
+
+message OpenRequest {
+  Version Ver = 1;
+  string BatchName = 2;
+  string ObjectName = 3;
+}
