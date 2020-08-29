@@ -1,0 +1,18 @@
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(dir $(mkfile_path))
+
+proto_dir := "../../proto/crane"
+cc_files := client.cc crane.grpc.pb.cc crane.pb.cc client2py.cpp
+
+.PHONY : clean
+
+proto:
+	cd $(current_dir) && \
+	protoc -I $(proto_dir) --grpc_out=. \
+		--plugin=protoc-gen-grpc=`which grpc_cpp_plugin` \
+		$(proto_dir)/crane.proto && \
+	protoc -I $(proto_dir) --cpp_out=. $(proto_dir)/crane.proto
+
+python:
+	cd $(current_dir) && \
+	g++ -Wall -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` $(cc_files) -o crane`python3-config --extension-suffix` -L/usr/local/lib -lprotobuf -lpthread -lgrpc++ -labsl_bad_optional_access -labsl_str_format_internal -labsl_time -labsl_time_zone -labsl_civil_time -labsl_strings -labsl_strings_internal -labsl_throw_delegate -labsl_int128 -labsl_base -labsl_spinlock_wait -labsl_raw_logging_internal -labsl_log_severity -labsl_dynamic_annotations -lgrpc -laddress_sorting -lupb -lcares -lz -labsl_bad_optional_access -labsl_str_format_internal -labsl_time -labsl_time_zone -labsl_civil_time -labsl_strings -labsl_strings_internal -labsl_throw_delegate -labsl_int128 -labsl_base -labsl_spinlock_wait -labsl_raw_logging_internal -labsl_log_severity -labsl_dynamic_annotations -lgpr -labsl_str_format_internal -labsl_time -labsl_time_zone -labsl_civil_time -labsl_strings -labsl_strings_internal -labsl_throw_delegate -labsl_int128 -labsl_base -labsl_spinlock_wait -labsl_raw_logging_internal -labsl_log_severity -labsl_dynamic_annotations -lssl -lcrypto -ldl -pthread -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed
