@@ -1,5 +1,5 @@
-#ifndef _LOG_H_
-#define _LOG_H_
+#ifndef LOG_LOG_H_
+#define LOG_LOG_H_
 
 #include <iostream>
 #include <cstdlib>
@@ -23,12 +23,15 @@ static Level& log_level() {
     }
 
     char* lv = std::getenv("MLDB_SDK_LOG");
-    if (lv == NULL) {
+    if (!lv) {
         log_level = None;
         return log_level;
     }
-    switch (std::stoi(lv))
-    {
+    int lv_i = std::stoi(lv);
+    switch (lv_i) {
+    case None:
+        log_level = None;
+        break;
     case Info:
         log_level = Info;
         break;
@@ -44,9 +47,12 @@ static Level& log_level() {
     case Debug:
         log_level = Debug;
         break;
-    case None:
     default:
-        log_level = None;
+        if (lv_i <= None) {
+            log_level = None;
+        } else {
+            log_level = Debug;
+        }
         break;
     }
     return log_level;
@@ -67,4 +73,4 @@ static Level& log_level() {
 
 #define dlog(v) log_impl(v) log_stream
 
-#endif
+#endif  // LOG_LOG_H_

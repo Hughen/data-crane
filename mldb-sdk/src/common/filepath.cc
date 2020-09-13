@@ -1,10 +1,14 @@
-#include "filepath.h"
-#include "string.h"
 #include <vector>
 #include <climits>
-#include <errno.h>
+#include <cerrno>
 #include <cstring>
+#include "filepath.h"
+#include "string.h"
 
+using std::vector;
+
+// just only support char* arguments
+// filepathJoin(2, "/tmp", string.c_str())
 string filepathJoin(int n, ...) {
     vector<string> path_segs;
     va_list vl;
@@ -29,11 +33,11 @@ string filepathJoin(int n, ...) {
     va_end(vl);
 
     string fpath = "";
-    if (first_arg[0] == '/') {
-        fpath += "/";
-    }
     for (const auto& v : path_segs) {
         if (fpath.empty()) {
+            if (first_arg.size() && first_arg[0] == '/') {
+                fpath = "/";
+            }
             fpath += v;
         } else {
             fpath += "/" + v;
@@ -58,7 +62,7 @@ void mkdir_p(const char* dir, mode_t mode) {
         errno = ENAMETOOLONG;
         return;
     }
-    strcpy(_path, dir);
+    snprintf(_path, sizeof(_path), "%s", dir);
 
     for (p = _path + 1; *p; p++) {
         if (*p != '/') {

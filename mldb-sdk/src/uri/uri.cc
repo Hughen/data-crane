@@ -1,10 +1,22 @@
+#include <stdexcept>
+#include <regex>        // NOLINT
 #include "uri.h"
 #include "common/string.h"
-#include <stdexcept>
-#include <regex>
+
+using std::regex;
+using std::smatch;
+using std::invalid_argument;
 
 static const regex reg("^(mldb):\\/\\/([^\\/]+)(\\/[^\\?]+)?\\/?(\\?.*)?$");
 
+URI::URI(const URI& uri) {
+    this->protocol = uri.protocol;
+    this->type = uri.type;
+    this->path = uri.path;
+    this->query = uri.query;
+}
+
+// mldb://batch/batch-name-1/objects/object-name-xxx
 // TODO: url decode
 void URI::_parse(const string& raw_uri) {
     // protocal position
@@ -28,8 +40,7 @@ void URI::_parse(const string& raw_uri) {
         this->type = Batch;
     } else {
         throw invalid_argument(
-            "just only support to 'raw' or 'batch' resource type"
-        );
+            "just only support to 'raw' or 'batch' resource type");
     }
 
     this->path = matches[3];
@@ -58,4 +69,40 @@ void URI::_parse(const string& raw_uri) {
             this->query[pk].push_back(pv);
         }
     }
+}
+
+string URI::String() const {
+    if (this->protocol != MLDB || (this->type != Raw && this->type != Batch)) {
+        return "";
+    }
+    string str_uri("mldb://");
+    switch (this->type) {
+    case Raw:
+        str_uri += "raw";
+        break;
+    case Batch:
+        str_uri += "batch";
+        break;
+    }
+    if (this->path.size() > 0) {
+        string dup_path = this->path;
+        ltrim(dup_path, "/");
+        str_uri += "/" + dup_path;
+    }
+    if (this->query.size() > 0) {
+        string param_value = "";
+        for (const auto& kv : this->query) {
+            for (const auto& pv : kv.second) {
+                param_value += "&" + kv.first + "=" + pv;
+            }
+        }
+        str_uri += "?" + param_value.substr(1);
+    }
+
+    return str_uri;
+}
+
+ostream& operator<<(ostream& os, const URI& uri) {
+    os << uri.String();
+    return os;
 }

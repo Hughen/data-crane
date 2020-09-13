@@ -1,19 +1,22 @@
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef COMMON_UTILS_H_
+#define COMMON_UTILS_H_
 
-#include <chrono>
-#include <thread>
-#include <cstdlib>
+#include <chrono>   // NOLINT
+#include <thread>   // NOLINT
+#include <random>
 
-using namespace std;
+using std::this_thread::sleep_for;
+using std::chrono::milliseconds;
+using std::random_device;
+using std::mt19937;
+using std::uniform_int_distribution;
 
 // unit is millisecond
 void sleepRandom(int min, int max) {
-    int t = rand() % max + min;
-    if (t == 0) {
-        return;
-    }
-    this_thread::sleep_for(chrono::milliseconds(t));
+    random_device rd;
+    mt19937 mt(rd());
+    uniform_int_distribution<int> dist(min, max);
+    sleep_for(milliseconds(dist(mt)));
 }
 
-#endif
+#endif  // COMMON_UTILS_H_

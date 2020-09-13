@@ -1,10 +1,12 @@
-#ifndef _MLDB_SDK_H_
+#ifndef _MLDB_SDK_H_    /* NOLINT */
 #define _MLDB_SDK_H_
 
+#include <string>
+#include <set>
 #include "uri/uri.h"
 #include "crane/client.h"
-#include <string>
-#include <pybind11/stl.h>
+#include "http/httprequest.h"
+#include "version/version.h"
 
 using crn::CraneClient;
 using std::string;
@@ -15,35 +17,36 @@ CraneClient& getCraneClient();
 static std::once_flag init_flag;
 
 class IODispatcher {
-public:
-    IODispatcher(const string& raw_uri);
-    ~IODispatcher();
+ public:
+    IODispatcher() = default;
+    explicit IODispatcher(const string& raw_uri);
+    IODispatcher(const IODispatcher& _another_io);
+    virtual ~IODispatcher();
 
-    char* read();
-    int write();
+    char* read(int* const& rsize);
+    int write(const char* content);
 
-private:
-    char* _crane_open();
+    // temporary API
+    string _filePath();
+
+ private:
+    char* _crane_open(int* const& rsize);
 
     URI *uri;
 };
 
 // exported
 class Prefetcher {
-public:
-    Prefetcher() {}
-    Prefetcher(const set<string>& lis = set<string>());
+ public:
+    explicit Prefetcher(const set<string>& lis = set<string>());
     Prefetcher* Append(const set<string>& lis);
+    virtual ~Prefetcher() {}
     int Start();
 };
 
 // exported
 void sdk_init();
-IODispatcher open(const std::string& raw_uri);
+IODispatcher* open(const std::string& raw_uri);
 set<string> list_batch();
 
-#endif
-
-#ifndef VERSION
-#define VERSION 1.0
-#endif
+#endif  // _MLDB_SDK_H_    /* NOLINT */

@@ -3,8 +3,11 @@
         {
             "name": "Linux",
             "includePath": [
+                "${workspaceFolder}/third_party/nlohmann_json/single_include",
+                "${workspaceFolder}/third_party/googletest/googletest/include",
                 "${workspaceFolder}/**",
-                "/usr/include/python3.8"
+                "/usr/include/python3.8",
+                "/usr/local/include/python3.8/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++-9",

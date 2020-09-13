@@ -1,15 +1,15 @@
-#include "client.h"
-#include "common/filepath.h"
-#include "common/string.h"
-#include "common/utils.h"
+#include <openssl/sha.h>
 #include <fstream>
 #include <sstream>
-#include <regex>
-#include <openssl/sha.h>
+#include <regex>    // NOLINT
 #include <cstdlib>
-#include <chrono>
+#include <chrono>   // NOLINT
 #include <stdexcept>
-#include <errno.h>
+#include <cerrno>
+#include "client.h" // NOLINT
+#include "common/string.h"
+#include "common/utils.h"
+#include "uri/uri.h"
 
 namespace crn {
 
@@ -19,7 +19,7 @@ using crane::PrefetchResponse;
 using google::protobuf::Empty;
 using grpc::StatusCode;
 
-const string CraneClient::_version = "1.0";
+const char CraneClient::_version[] = "1.0";
 
 string get_csi_volume() {
     std::ifstream cpuset_file("/proc/1/cpuset");
@@ -29,8 +29,7 @@ string get_csi_volume() {
 
     std::regex reg(
         "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
-        std::regex_constants::icase | std::regex_constants::ECMAScript
-    );
+        std::regex_constants::icase | std::regex_constants::ECMAScript);
     std::smatch match;
     string pod_uid;
     if (std::regex_search(content, match, reg)) {
@@ -52,7 +51,7 @@ string get_csi_volume() {
 
     string hash_value;
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(buf, "%02x", hash[i]);
+        snprintf(buf, sizeof(buf), "%02x", hash[i]);
         hash_value = hash_value + buf;
     }
 
@@ -62,7 +61,7 @@ string get_csi_volume() {
 string get_lcs_root() {
     char* v = std::getenv("LCS_ROOT");
     string lcs;
-    if (v == NULL) {
+    if (!v) {
         lcs = "/lcs";
     } else {
         lcs = string(v);
@@ -74,7 +73,7 @@ string get_lcs_root() {
 }
 
 PrefetchList::PrefetchList() : fname(get_lcs_root() + "/.crane/prefetch_list") {
-    string fpath = filepathJoin(2, fname, "..");
+    string fpath = filepathJoin(2, fname.c_str(), "..");
     mkdir_p(fpath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 }
 
@@ -111,14 +110,14 @@ int PrefetchList::reset(const vector<string>& lines) {
 CraneClient::CraneClient() {
     std::shared_ptr<Channel> channel = grpc::CreateChannel(
         "unix:///var/run/data-crane/crane.sock",
-        grpc::InsecureChannelCredentials()
-    );
+        grpc::InsecureChannelCredentials());
     this->stub_ = Crane::NewStub(channel);
 
     this->initMembers();
 }
 
-CraneClient::CraneClient(std::shared_ptr<Channel> channel) : stub_(Crane::NewStub(channel)) {
+CraneClient::CraneClient(std::shared_ptr<Channel> channel) :
+    stub_(Crane::NewStub(channel)) {
     this->initMembers();
 }
 
@@ -128,33 +127,29 @@ CraneClient::~CraneClient() {
 
 int CraneClient::Open(const URI* uri, string& file) {
     string path = uri->path;
-    size_t pos = path.find("/");
-    if (pos == string::npos || (pos + 1) >= path.size()) {
+
+    // path: batch-name/object/object-name.bin
+    vector<string> segs = split(path, "/", 3);
+    if (segs.size() != 3) {
         // invalid uri
         return -EINVAL;
     }
 
-    string batch_name = path.substr(0, pos);
-    string object_name = path.substr(pos + 1);
-
-    return this->Open(batch_name, object_name, file);
+    return this->Open(segs[0], segs[2], file);
 }
 
 int CraneClient::Open(
     const string& batch,
     const string& object,
-    string& file)
-{
+    string& file) {
     do {
         int status_code = this->_open(batch, object, file);
-        switch (status_code)
-        {
-        case StatusCode::OK:
+        if (status_code == StatusCode::OK) {
+            file = this->getSelfFilePath(file);
             break;
-        case StatusCode::NOT_FOUND:
+        } else if (status_code == StatusCode::NOT_FOUND) {
             throw std::overflow_error(
-                "the '" + batch + "/" + object + "' is not found"
-            );
+                "the '" + batch + "/" + object + "' is not found");
         }
 
         sleepRandom(5, 50);
@@ -166,8 +161,7 @@ int CraneClient::Open(
 int CraneClient::_open(
     const string& batch,
     const string& object,
-    string& file)
-{
+    string& file) {
     auto _st = std::chrono::system_clock::now();
 
     grpc::ClientContext ctx;
@@ -184,16 +178,16 @@ int CraneClient::_open(
 
     std::chrono::duration<double> cost = std::chrono::system_clock::now() - _st;
 
-    dlog(Debug) << "crane open \"" << batch << "/" << object << "\""
+    dlog(Debug) << "crane open \"" << batch << "/object/" << object << "\""
         << " called cost: " << cost.count() << "s"
         << " status code: " << status.error_code()
-        << " error message: " << status.error_message() << lendl;
+        << " error message: \"" << status.error_message()  << "\"" << lendl;
 
     if (status.ok()) {
         file = reply.path();
         return status.error_code();
     }
-    
+
     return status.error_code();
 }
 
@@ -233,4 +227,4 @@ int CraneClient::StartPrefetch() {
     return -err_code;
 }
 
-}
+}   // namespace crn

@@ -1,15 +1,15 @@
-#ifndef _FILE_PATH_H_
-#define _FILE_PATH_H_
+#ifndef COMMON_FILEPATH_H_
+#define COMMON_FILEPATH_H_
 
+#include <sys/stat.h>
 #include <string>
 #include <cstdarg>
-#include <sys/stat.h>
 
-using namespace std;
+using std::string;
 
 string filepathJoin(int n, ...);
 
 void mkdir_p(const string& dir, mode_t mode);
 void mkdir_p(const char* dir, mode_t mode);
 
-#endif
+#endif  // COMMON_FILEPATH_H_
